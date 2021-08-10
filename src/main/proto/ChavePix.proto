@@ -1,0 +1,32 @@
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_package = "br.com.zup.edu";
+option java_outer_classname = "ChavePix";
+
+package br.com.zup.edu;
+
+service ChavePixService {
+  rpc registrarChavePix (RegistrarChavePixGrpcRequest) returns (RegistrarChavePixGrpcResponse) {}
+}
+enum TipoChave {
+  CEP = 0;
+  TELEFONE = 1;
+  EMAIL = 2;
+  CHAVE_ALEATORIA= 3;
+}
+enum TipoConta {
+  CORRENTE = 0;
+  POUPANCA = 1;
+}
+
+message RegistrarChavePixGrpcRequest {
+  string idCliente = 1;
+  TipoChave tipoChave = 2;
+  string chave = 3;
+  TipoConta tipoConta = 4;
+}
+
+message RegistrarChavePixGrpcResponse {
+  string idChavePix = 1;
+}
