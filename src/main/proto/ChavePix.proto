@@ -8,6 +8,7 @@ package br.com.zup.edu;
 
 service ChavePixService {
   rpc registrarChavePix (RegistrarChavePixGrpcRequest) returns (RegistrarChavePixGrpcResponse) {}
+  rpc removerChavePix (RemoverChavePixGrpcRequest) returns (RemoverChavePixGrpcResponse) {}
 }
 enum TipoChave {
   CPF = 0;
@@ -28,5 +29,14 @@ message RegistrarChavePixGrpcRequest {
 }
 
 message RegistrarChavePixGrpcResponse {
+  string idChavePix = 1;
+}
+
+message RemoverChavePixGrpcRequest {
+  string idCliente = 1;
+  string idChavePix = 2;
+}
+
+message RemoverChavePixGrpcResponse {
   string idChavePix = 1;
 }

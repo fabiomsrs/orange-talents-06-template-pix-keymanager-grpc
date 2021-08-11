@@ -1,12 +1,13 @@
-package br.com.zup.edu.chavepix
+package br.com.zup.edu.validator
 
 import br.com.zup.edu.RegistrarChavePixGrpcRequest
 import br.com.zup.edu.RegistrarChavePixGrpcResponse
 import br.com.zup.edu.TipoChave
+import br.com.zup.edu.chavepix.ChavePixRepository
 import io.grpc.Status
 import io.grpc.stub.StreamObserver
 
-class ChavePixValidator(
+class ChavePixRegisterValidator(
     val request: RegistrarChavePixGrpcRequest?,
     val responseObserver: StreamObserver<RegistrarChavePixGrpcResponse>?,
     val chavePixRepository: ChavePixRepository

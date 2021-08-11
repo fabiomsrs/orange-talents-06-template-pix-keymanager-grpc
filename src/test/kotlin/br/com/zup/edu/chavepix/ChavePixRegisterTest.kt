@@ -20,7 +20,7 @@ import javax.inject.Singleton
 
 
 @MicronautTest(transactional = false)
-internal class ChavePixServerTest(
+internal class ChavePixRegisterTest(
     val grpClient: ChavePixServiceGrpc.ChavePixServiceBlockingStub,
 ) {
     @Inject
