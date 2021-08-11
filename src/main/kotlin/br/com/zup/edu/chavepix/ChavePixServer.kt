@@ -6,11 +6,12 @@ import io.grpc.Status
 import io.grpc.StatusRuntimeException
 import io.grpc.stub.StreamObserver
 import java.util.*
+import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class ChavePixServer(val chavePixRepository: ChavePixRepository,
-    val itauERPClient: ItauERPClient
+class ChavePixServer(@Inject val chavePixRepository: ChavePixRepository,
+                     @Inject val itauERPClient: ItauERPClient
 ): ChavePixServiceGrpc.ChavePixServiceImplBase() {
 
     override fun registrarChavePix(
@@ -18,73 +19,31 @@ class ChavePixServer(val chavePixRepository: ChavePixRepository,
         responseObserver: StreamObserver<RegistrarChavePixGrpcResponse>?
     ) {
         var chave = request!!.chave
-        when {
-            request!!.tipoConta.toString().isNullOrBlank() -> {
-                val error = Status.INVALID_ARGUMENT
-                    .withDescription("tipo conta deve ser informada")
-                    .asRuntimeException()
-                responseObserver?.onError(error)
-                return
-            }
-            request!!.chave.isNullOrBlank() && request.tipoChave != TipoChave.CHAVE_ALEATORIA -> {
-                val error = Status.INVALID_ARGUMENT
-                    .withDescription("chave deve ser informada")
-                    .asRuntimeException()
-                responseObserver?.onError(error)
-                return
-            }
-            chavePixRepository.existsByChave(request!!.chave) -> {
-                val error = Status.ALREADY_EXISTS
-                    .withDescription("chave ja existe")
-                    .asRuntimeException()
-                responseObserver?.onError(error)
-                return
-            }
-            !request.chave.matches("^[0-9]{11}\$".toRegex()) && request.tipoChave == TipoChave.CEP -> {
-                val error = Status.INVALID_ARGUMENT
-                    .withDescription("chave cep formato invalida")
-                    .augmentDescription("formato esperado 12345678901")
-                    .asRuntimeException()
-                responseObserver?.onError(error)
-                return
-            }
-            !request.chave.matches("^\\+[1-9][0-9]\\d{1,14}\$".toRegex()) && request.tipoChave == TipoChave.TELEFONE -> {
-                val error = Status.INVALID_ARGUMENT
-                    .withDescription("chave telefone formato invalida")
-                    .augmentDescription("formato esperado +5585988714077")
-                    .asRuntimeException()
-                responseObserver?.onError(error)
-                return
-            }
-            !request.chave.matches("^[A-Za-z0-9+_.-]+@(.+)\\\$".toRegex()) && request.tipoChave == TipoChave.EMAIL -> {
-                val error = Status.INVALID_ARGUMENT
-                    .withDescription("chave email formato invalida")
-                    .augmentDescription("formato esperado teste@teste.com")
-                    .asRuntimeException()
-                responseObserver?.onError(error)
-                return
-            }
-            request.chave.isNullOrBlank() && request.tipoChave == TipoChave.CHAVE_ALEATORIA -> {
-                chave = UUID.randomUUID().toString()
-            }
 
+        if (request.tipoChave == TipoChave.CHAVE_ALEATORIA) {
+            chave = UUID.randomUUID().toString()
         }
 
         try{
             itauERPClient.consultarCliente(request!!.idCliente).let { response ->
-                if(response.status.code == 200){
-                    val chavePix = chavePixRepository.save(ChavePix(request.tipoChave, chave, request.tipoConta))
+                if(ChavePixValidator(request, responseObserver, chavePixRepository)
+                    .validate() && response.status.code==200){
+                    val chavePix = chavePixRepository.save(ChavePix(request.idCliente,request.tipoChave, chave, request.tipoConta))
                     responseObserver!!.onNext(RegistrarChavePixGrpcResponse
                         .newBuilder()
                         .setIdChavePix(chavePix.id.toString())
                         .build()
                     )
                     responseObserver!!.onCompleted()
+                    return
                 }
+                responseObserver?.onError(Status.NOT_FOUND
+                    .withDescription("cliente id incorreto ou não informado")
+                    .asRuntimeException())
+
             }
-        }catch (e: StatusRuntimeException){
-            println("deu ruim ${e.status.code}")
-            responseObserver!!.onCompleted()
+        }catch (e: Exception){
+            throw InternalError("algo deu errado, tente novamente mais tarde ${e}")
         }
     }
 }

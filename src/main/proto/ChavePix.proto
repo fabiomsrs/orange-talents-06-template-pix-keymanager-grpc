@@ -10,7 +10,7 @@ service ChavePixService {
   rpc registrarChavePix (RegistrarChavePixGrpcRequest) returns (RegistrarChavePixGrpcResponse) {}
 }
 enum TipoChave {
-  CEP = 0;
+  CPF = 0;
   TELEFONE = 1;
   EMAIL = 2;
   CHAVE_ALEATORIA= 3;
