@@ -15,14 +15,14 @@ class ChavePixRegisterValidator(
 
     fun validate(): Boolean {
         when {
-            request!!.tipoChave == TipoChave.CHAVE_ALEATORIA && !request.chave.isNullOrEmpty()-> {
+            request!!.tipoChave == TipoChave.RANDOM && !request.chave.isNullOrEmpty()-> {
                 responseObserver?.onError(
                     Status.INVALID_ARGUMENT
                         .withDescription("chave não deve ser preenchida no tipo chave aleatorio")
                         .asRuntimeException())
                 return false
             }
-            request!!.chave.isNullOrBlank() && request.tipoChave != TipoChave.CHAVE_ALEATORIA -> {
+            request!!.chave.isNullOrBlank() && request.tipoChave != TipoChave.RANDOM -> {
                 responseObserver?.onError(
                     Status.INVALID_ARGUMENT
                     .withDescription("chave deve ser informada")
@@ -44,7 +44,7 @@ class ChavePixRegisterValidator(
                     .asRuntimeException())
                 return false
             }
-            !request.chave.matches("^\\+[1-9][0-9]\\d{1,14}\$".toRegex()) && request.tipoChave == TipoChave.TELEFONE -> {
+            !request.chave.matches("^\\+[1-9][0-9]\\d{1,14}\$".toRegex()) && request.tipoChave == TipoChave.PHONE -> {
                 responseObserver?.onError(
                     Status.INVALID_ARGUMENT
                     .withDescription("chave telefone formato invalido")

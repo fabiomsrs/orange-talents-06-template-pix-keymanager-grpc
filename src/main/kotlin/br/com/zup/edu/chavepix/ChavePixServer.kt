@@ -1,41 +1,52 @@
 package br.com.zup.edu.chavepix
 
 import br.com.zup.edu.*
-import br.com.zup.edu.shared.ItauERPClient
+import br.com.zup.edu.shared.*
+import br.com.zup.edu.shared.request.BCBPixDeleteRequest
 import br.com.zup.edu.validator.ChavePixRegisterValidator
 import br.com.zup.edu.validator.ChavePixRemoverValidator
 import io.grpc.Status
 import io.grpc.stub.StreamObserver
-import java.util.*
 import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
 class ChavePixServer(@Inject val chavePixRepository: ChavePixRepository,
-                     @Inject val itauERPClient: ItauERPClient
+                     @Inject val itauERPClient: ItauERPClient,
+                     @Inject val bcbClient: BCBClient
 ): ChavePixServiceGrpc.ChavePixServiceImplBase() {
 
     override fun registrarChavePix(
         request: RegistrarChavePixGrpcRequest?,
         responseObserver: StreamObserver<RegistrarChavePixGrpcResponse>?
     ) {
-        var chave = request!!.chave
-
-        if (request.tipoChave == TipoChave.CHAVE_ALEATORIA) {
-            chave = UUID.randomUUID().toString()
-        }
 
         try{
-            itauERPClient.consultarCliente(request!!.idCliente).let { response ->
+            itauERPClient.consultarContaCliente(request!!.idCliente, request!!.tipoConta.name).let { response ->
                 if(ChavePixRegisterValidator(request, responseObserver, chavePixRepository)
                     .validate() && response.status.code==200){
-                    val chavePix = chavePixRepository.save(ChavePix(request.idCliente,request.tipoChave, chave, request.tipoConta))
-                    responseObserver!!.onNext(RegistrarChavePixGrpcResponse
-                        .newBuilder()
-                        .setIdChavePix(chavePix.id.toString())
-                        .build()
+                    val body = response.body()
+                    val bcbPixRequest = BCBPixRequest(request!!.tipoChave.name,
+                        request!!.chave,
+                        BankAccountDto(body.instituicao.ispb,body.agencia,body.numero,"CACC"),
+                        BankOwnerDto("NATURAL_PERSON",body.titular.nome, body.titular.cpf)
                     )
-                    responseObserver!!.onCompleted()
+                    bcbClient.gerarChavePix(bcbPixRequest).let { response ->
+                        val chavePix = chavePixRepository.save(
+                            ChavePix(
+                                request.idCliente,
+                                request.tipoChave,
+                                response.body().key,
+                                request.tipoConta,
+                            )
+                        )
+                        responseObserver!!.onNext(RegistrarChavePixGrpcResponse
+                            .newBuilder()
+                            .setIdChavePix(chavePix.id.toString())
+                            .build()
+                        )
+                        responseObserver!!.onCompleted()
+                    }
                     return
                 }
                 responseObserver?.onError(Status.NOT_FOUND
@@ -54,13 +65,34 @@ class ChavePixServer(@Inject val chavePixRepository: ChavePixRepository,
     ) {
 
         if(ChavePixRemoverValidator(request, responseObserver, chavePixRepository).validate()){
-            chavePixRepository.deleteById(request!!.idChavePix.toLong())
-            responseObserver!!.onNext(RemoverChavePixGrpcResponse
-                .newBuilder()
-                .setIdChavePix(request.idChavePix)
-                .build()
+            val itauResponse = itauERPClient.consultarCliente(request!!.idCliente)
+                .body()
+
+            val optionalChavePix = chavePixRepository.findById(request!!.idChavePix.toLong())
+
+            if(optionalChavePix.isEmpty){
+                responseObserver?.onError(Status.NOT_FOUND
+                    .withDescription("chave pix id incorreto ou não informado")
+                    .asRuntimeException())
+                return
+            }
+
+            val chavePix = optionalChavePix.get()
+
+            bcbClient.deletarChavePix(
+                chavePix.valor,
+                BCBPixDeleteRequest(chavePix.valor, itauResponse.instituicao.ispb),
             )
-            responseObserver!!.onCompleted()
+                .takeIf { it.status.code == 200 }
+                ?.run {
+                    chavePixRepository.delete(chavePix)
+                    responseObserver!!.onNext(RemoverChavePixGrpcResponse
+                        .newBuilder()
+                        .setIdChavePix(request.idChavePix)
+                        .build()
+                    )
+                    responseObserver!!.onCompleted()
+                }
         }
     }
 }

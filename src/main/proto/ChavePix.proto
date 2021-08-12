@@ -12,12 +12,12 @@ service ChavePixService {
 }
 enum TipoChave {
   CPF = 0;
-  TELEFONE = 1;
+  PHONE = 1;
   EMAIL = 2;
-  CHAVE_ALEATORIA= 3;
+  RANDOM= 3;
 }
 enum TipoConta {
-  CORRENTE = 0;
+  CONTA_CORRENTE = 0;
   POUPANCA = 1;
 }
 

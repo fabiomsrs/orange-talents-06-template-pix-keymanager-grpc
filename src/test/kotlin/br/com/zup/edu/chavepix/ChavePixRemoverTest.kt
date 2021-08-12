@@ -1,15 +1,27 @@
 package br.com.zup.edu.chavepix
 
 import br.com.zup.edu.*
+import br.com.zup.edu.shared.BCBClient
+import br.com.zup.edu.shared.request.BCBPixDeleteRequest
+import io.grpc.ManagedChannel
 import io.grpc.Status
 import io.grpc.StatusRuntimeException
+import io.micronaut.context.annotation.Factory
+import io.micronaut.grpc.annotation.GrpcChannel
+import io.micronaut.grpc.server.GrpcServerChannel
+import io.micronaut.http.HttpResponse
+import io.micronaut.test.annotation.MockBean
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest
 import org.junit.jupiter.api.*
+import org.mockito.BDDMockito
+import org.mockito.Mockito
 import javax.inject.Inject
+import javax.inject.Singleton
 
 @MicronautTest(transactional = false)
 internal class ChavePixRemoverTest(
-    val grpClient: ChavePixServiceGrpc.ChavePixServiceBlockingStub
+    val grpClient: ChavePixServiceGrpc.ChavePixServiceBlockingStub,
+    val bcbClient: BCBClient
 ) {
 
     @Inject
@@ -19,7 +31,7 @@ internal class ChavePixRemoverTest(
 
     @BeforeEach
     fun setUp() {
-        chavePix = repository.save(ChavePix("c56dfef4-7901-44fb-84e2-a2cefb157890", TipoChave.CPF, "12345678901", TipoConta.CORRENTE))
+        chavePix = repository.save(ChavePix("c56dfef4-7901-44fb-84e2-a2cefb157890", TipoChave.CPF, "12345678901", TipoConta.CONTA_CORRENTE))
     }
 
     @AfterEach
@@ -29,6 +41,11 @@ internal class ChavePixRemoverTest(
 
     @Test
     fun `deve remover uma chave pix`() {
+        // Setting up mockito bcb client
+        val bcbRequest = BCBPixDeleteRequest("12345678901","60701190")
+
+        BDDMockito.`when`(bcbClient.deletarChavePix(bcbRequest.key, bcbRequest)).thenReturn(HttpResponse.ok())
+
 
         val response = grpClient.removerChavePix(
             RemoverChavePixGrpcRequest
@@ -115,4 +132,15 @@ internal class ChavePixRemoverTest(
         }
     }
 
+    @MockBean(BCBClient::class)
+    fun BCBClientMock(): BCBClient {
+        return Mockito.mock(BCBClient::class.java)
+    }
+    @Factory
+    class Clients {
+        @Singleton
+        fun blockingStub(@GrpcChannel(GrpcServerChannel.NAME) channel: ManagedChannel): ChavePixServiceGrpc.ChavePixServiceBlockingStub {
+            return ChavePixServiceGrpc.newBlockingStub(channel)
+        }
+    }
 }

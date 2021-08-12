@@ -4,24 +4,34 @@ import br.com.zup.edu.ChavePixServiceGrpc
 import br.com.zup.edu.RegistrarChavePixGrpcRequest
 import br.com.zup.edu.TipoChave
 import br.com.zup.edu.TipoConta
+import br.com.zup.edu.shared.BCBClient
+import br.com.zup.edu.shared.BCBPixRequest
+import br.com.zup.edu.shared.BankAccountDto
+import br.com.zup.edu.shared.BankOwnerDto
+import br.com.zup.edu.shared.response.BCBPixResponse
 import io.grpc.ManagedChannel
 import io.grpc.StatusRuntimeException
 import io.micronaut.context.annotation.Factory
 import io.micronaut.grpc.annotation.GrpcChannel
 import io.micronaut.grpc.server.GrpcServerChannel
+import io.micronaut.http.HttpResponse
+import io.micronaut.test.annotation.MockBean
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
+import org.mockito.BDDMockito
+import org.mockito.Mockito
 import java.util.*
 import javax.inject.Inject
 import javax.inject.Singleton
 
 
 @MicronautTest(transactional = false)
-internal class ChavePixRegisterTest(
+class ChavePixRegisterTest(
     val grpClient: ChavePixServiceGrpc.ChavePixServiceBlockingStub,
+    val bcbClient: BCBClient
 ) {
     @Inject
     lateinit var repository: ChavePixRepository
@@ -33,11 +43,21 @@ internal class ChavePixRegisterTest(
 
     @Test
     fun `deve criar uma nova chave pix`() {
+        // Setting up mockito bcb client
+        val bcbRequest = BCBPixRequest("CPF",
+            "12345678901",
+            BankAccountDto("60701190","0001","123456","CACC"),
+            BankOwnerDto("NATURAL_PERSON", "steve jobs", "12345678901")
+        )
+        val bcbResponse = BCBPixResponse(bcbRequest.keyType, bcbRequest.key, bcbRequest.bankAccount, bcbRequest.owner)
+
+        BDDMockito.`when`(bcbClient.gerarChavePix(bcbRequest)).thenReturn(HttpResponse.created(bcbResponse))
+
         val response = grpClient.registrarChavePix(RegistrarChavePixGrpcRequest
             .newBuilder()
-            .setChave("04673696310")
+            .setChave("12345678901")
             .setTipoChave(TipoChave.CPF)
-            .setTipoConta(TipoConta.CORRENTE)
+            .setTipoConta(TipoConta.CONTA_CORRENTE)
             .setIdCliente("c56dfef4-7901-44fb-84e2-a2cefb157890")
             .build()
         )
@@ -52,8 +72,8 @@ internal class ChavePixRegisterTest(
         val request = RegistrarChavePixGrpcRequest
             .newBuilder()
             .setChave("04673696310")
-            .setTipoChave(TipoChave.CHAVE_ALEATORIA)
-            .setTipoConta(TipoConta.CORRENTE)
+            .setTipoChave(TipoChave.RANDOM)
+            .setTipoConta(TipoConta.CONTA_CORRENTE)
             .setIdCliente("c56dfef4-7901-44fb-84e2-a2cefb157890")
             .build()
 
@@ -73,7 +93,7 @@ internal class ChavePixRegisterTest(
             .newBuilder()
             .setChave("")
             .setTipoChave(TipoChave.CPF)
-            .setTipoConta(TipoConta.CORRENTE)
+            .setTipoConta(TipoConta.CONTA_CORRENTE)
             .setIdCliente("c56dfef4-7901-44fb-84e2-a2cefb157890")
             .build()
 
@@ -92,8 +112,8 @@ internal class ChavePixRegisterTest(
         val response = grpClient.registrarChavePix(RegistrarChavePixGrpcRequest
             .newBuilder()
             .setChave("")
-            .setTipoChave(TipoChave.CHAVE_ALEATORIA)
-            .setTipoConta(TipoConta.CORRENTE)
+            .setTipoChave(TipoChave.RANDOM)
+            .setTipoConta(TipoConta.CONTA_CORRENTE)
             .setIdCliente("c56dfef4-7901-44fb-84e2-a2cefb157890")
             .build()
         )
@@ -110,8 +130,8 @@ internal class ChavePixRegisterTest(
         val request = RegistrarChavePixGrpcRequest
             .newBuilder()
             .setChave("")
-            .setTipoChave(TipoChave.TELEFONE)
-            .setTipoConta(TipoConta.CORRENTE)
+            .setTipoChave(TipoChave.PHONE)
+            .setTipoConta(TipoConta.CONTA_CORRENTE)
             .setIdCliente("c56dfef4-7901-44fb-84e2-a2cefb157890")
             .build()
 
@@ -130,7 +150,7 @@ internal class ChavePixRegisterTest(
             .newBuilder()
             .setChave("")
             .setTipoChave(TipoChave.EMAIL)
-            .setTipoConta(TipoConta.CORRENTE)
+            .setTipoConta(TipoConta.CONTA_CORRENTE)
             .setIdCliente("c56dfef4-7901-44fb-84e2-a2cefb157890")
             .build()
 
@@ -150,7 +170,7 @@ internal class ChavePixRegisterTest(
             .newBuilder()
             .setChave("1234")
             .setTipoChave(TipoChave.CPF)
-            .setTipoConta(TipoConta.CORRENTE)
+            .setTipoConta(TipoConta.CONTA_CORRENTE)
             .setIdCliente("c56dfef4-7901-44fb-84e2-a2cefb157890")
             .build()
 
@@ -171,7 +191,7 @@ internal class ChavePixRegisterTest(
             .newBuilder()
             .setChave("1234")
             .setTipoChave(TipoChave.EMAIL)
-            .setTipoConta(TipoConta.CORRENTE)
+            .setTipoConta(TipoConta.CONTA_CORRENTE)
             .setIdCliente("c56dfef4-7901-44fb-84e2-a2cefb157890")
             .build()
 
@@ -191,8 +211,8 @@ internal class ChavePixRegisterTest(
         val request = RegistrarChavePixGrpcRequest
             .newBuilder()
             .setChave("1234")
-            .setTipoChave(TipoChave.TELEFONE)
-            .setTipoConta(TipoConta.CORRENTE)
+            .setTipoChave(TipoChave.PHONE)
+            .setTipoConta(TipoConta.CONTA_CORRENTE)
             .setIdCliente("c56dfef4-7901-44fb-84e2-a2cefb157890")
             .build()
 
@@ -209,12 +229,12 @@ internal class ChavePixRegisterTest(
 
     @Test
     fun `retornar already exists em caso de chave repedita`() {
-        repository.save(ChavePix("c56dfef4-7901-44fb-84e2-a2cefb157890", TipoChave.CPF, "12345678901", TipoConta.CORRENTE))
+        repository.save(ChavePix("c56dfef4-7901-44fb-84e2-a2cefb157890", TipoChave.CPF, "12345678901", TipoConta.CONTA_CORRENTE))
         val request = RegistrarChavePixGrpcRequest
             .newBuilder()
             .setChave("12345678901")
             .setTipoChave(TipoChave.CPF)
-            .setTipoConta(TipoConta.CORRENTE)
+            .setTipoConta(TipoConta.CONTA_CORRENTE)
             .setIdCliente("c56dfef4-7901-44fb-84e2-a2cefb157890")
             .build()
 
@@ -227,12 +247,9 @@ internal class ChavePixRegisterTest(
         }
     }
 
-    @Factory
-    class Clients {
-        @Singleton
-        fun blockingStub(@GrpcChannel(GrpcServerChannel.NAME) channel: ManagedChannel): ChavePixServiceGrpc.ChavePixServiceBlockingStub {
-            return ChavePixServiceGrpc.newBlockingStub(channel)
-        }
+    @MockBean(BCBClient::class)
+    fun BCBClientMock(): BCBClient {
+        return Mockito.mock(BCBClient::class.java)
     }
 
     fun isUUID(string: String?): Boolean {
@@ -241,6 +258,13 @@ internal class ChavePixRegisterTest(
             true
         } catch (ex: Exception) {
             false
+        }
+    }
+    @Factory
+    class Clients {
+        @Singleton
+        fun blockingStub(@GrpcChannel(GrpcServerChannel.NAME) channel: ManagedChannel): ChavePixServiceGrpc.ChavePixServiceBlockingStub {
+            return ChavePixServiceGrpc.newBlockingStub(channel)
         }
     }
 }
