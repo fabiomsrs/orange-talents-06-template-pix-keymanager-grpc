@@ -4,12 +4,10 @@ import br.com.zup.edu.ChavePixServiceGrpc
 import br.com.zup.edu.RegistrarChavePixGrpcRequest
 import br.com.zup.edu.TipoChave
 import br.com.zup.edu.TipoConta
-import br.com.zup.edu.shared.BCBClient
-import br.com.zup.edu.shared.BCBPixRequest
-import br.com.zup.edu.shared.BankAccountDto
-import br.com.zup.edu.shared.BankOwnerDto
+import br.com.zup.edu.shared.*
 import br.com.zup.edu.shared.response.BCBPixResponse
 import io.grpc.ManagedChannel
+import io.grpc.Status
 import io.grpc.StatusRuntimeException
 import io.micronaut.context.annotation.Factory
 import io.micronaut.grpc.annotation.GrpcChannel
@@ -23,6 +21,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.mockito.BDDMockito
 import org.mockito.Mockito
+import org.mockito.Mockito.`when`
 import java.util.*
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -31,7 +30,8 @@ import javax.inject.Singleton
 @MicronautTest(transactional = false)
 class ChavePixRegisterTest(
     val grpClient: ChavePixServiceGrpc.ChavePixServiceBlockingStub,
-    val bcbClient: BCBClient
+    val bcbClient: BCBClient,
+    val itauERPClient: ItauERPClient
 ) {
     @Inject
     lateinit var repository: ChavePixRepository
@@ -46,18 +46,26 @@ class ChavePixRegisterTest(
         // Setting up mockito bcb client
         val bcbRequest = BCBPixRequest("CPF",
             "12345678901",
-            BankAccountDto("60701190","0001","123456","CACC"),
+            BankAccountDto("60701190","0001","123456",TipoConta.CACC),
             BankOwnerDto("NATURAL_PERSON", "steve jobs", "12345678901")
         )
         val bcbResponse = BCBPixResponse(bcbRequest.keyType, bcbRequest.key, bcbRequest.bankAccount, bcbRequest.owner)
+        val itauResponse = ClienteContaItauResponse(TipoConta.CACC.name,
+            InstituicaoDto("itau","60701190"),
+            "0001",
+            "123456",
+            TitularDto("1", "steve jobs","12345678901")
+        )
 
-        BDDMockito.`when`(bcbClient.gerarChavePix(bcbRequest)).thenReturn(HttpResponse.created(bcbResponse))
+        `when`(itauERPClient.consultarContaCliente("c56dfef4-7901-44fb-84e2-a2cefb157890",TipoConta.CACC.name)).thenReturn(
+            HttpResponse.ok(itauResponse))
+        `when`(bcbClient.gerarChavePix(bcbRequest)).thenReturn(HttpResponse.created(bcbResponse))
 
         val response = grpClient.registrarChavePix(RegistrarChavePixGrpcRequest
             .newBuilder()
             .setChave("12345678901")
             .setTipoChave(TipoChave.CPF)
-            .setTipoConta(TipoConta.CONTA_CORRENTE)
+            .setTipoConta(TipoConta.CACC)
             .setIdCliente("c56dfef4-7901-44fb-84e2-a2cefb157890")
             .build()
         )
@@ -73,7 +81,7 @@ class ChavePixRegisterTest(
             .newBuilder()
             .setChave("04673696310")
             .setTipoChave(TipoChave.RANDOM)
-            .setTipoConta(TipoConta.CONTA_CORRENTE)
+            .setTipoConta(TipoConta.CACC)
             .setIdCliente("c56dfef4-7901-44fb-84e2-a2cefb157890")
             .build()
 
@@ -82,6 +90,7 @@ class ChavePixRegisterTest(
         }
 
         with(exception){
+            Assertions.assertEquals(exception.status.code, Status.INVALID_ARGUMENT.code)
             Assertions.assertEquals(exception.status.description, "chave não deve ser preenchida no tipo chave aleatorio")
             Assertions.assertTrue(repository.findAll().isEmpty())
         }
@@ -93,7 +102,7 @@ class ChavePixRegisterTest(
             .newBuilder()
             .setChave("")
             .setTipoChave(TipoChave.CPF)
-            .setTipoConta(TipoConta.CONTA_CORRENTE)
+            .setTipoConta(TipoConta.CACC)
             .setIdCliente("c56dfef4-7901-44fb-84e2-a2cefb157890")
             .build()
 
@@ -102,6 +111,7 @@ class ChavePixRegisterTest(
         }
 
         with(exception){
+            Assertions.assertEquals(exception.status.code, Status.INVALID_ARGUMENT.code)
             Assertions.assertEquals(exception.status.description, "chave deve ser informada")
             Assertions.assertTrue(repository.findAll().isEmpty())
         }
@@ -109,19 +119,37 @@ class ChavePixRegisterTest(
 
     @Test
     fun `deve criar uma chave aleatoria com UUID gerado`() {
+
+        val bcbRequest = BCBPixRequest(TipoChave.RANDOM.name,
+            "",
+            BankAccountDto("60701190","0001","123456",TipoConta.CACC),
+            BankOwnerDto("NATURAL_PERSON", "steve jobs", "12345678901")
+        )
+        val bcbResponse = BCBPixResponse(bcbRequest.keyType, UUID.randomUUID().toString(), bcbRequest.bankAccount, bcbRequest.owner)
+        val itauResponse = ClienteContaItauResponse(TipoConta.CACC.name,
+            InstituicaoDto("itau","60701190"),
+            "0001",
+            "123456",
+            TitularDto("1", "steve jobs","12345678901")
+        )
+
+        `when`(itauERPClient.consultarContaCliente("c56dfef4-7901-44fb-84e2-a2cefb157890",TipoConta.CACC.name)).thenReturn(
+            HttpResponse.ok(itauResponse))
+        `when`(bcbClient.gerarChavePix(bcbRequest)).thenReturn(HttpResponse.created(bcbResponse))
+
         val response = grpClient.registrarChavePix(RegistrarChavePixGrpcRequest
             .newBuilder()
             .setChave("")
             .setTipoChave(TipoChave.RANDOM)
-            .setTipoConta(TipoConta.CONTA_CORRENTE)
+            .setTipoConta(TipoConta.CACC)
             .setIdCliente("c56dfef4-7901-44fb-84e2-a2cefb157890")
             .build()
         )
 
         with(response) {
-            val uuid = repository.findById(idChavePix.toLong()).get().valor.toString()
+            val chave = repository.findById(idChavePix.toLong()).get()
             Assertions.assertNotNull(idChavePix)
-            Assertions.assertTrue(isUUID(uuid))
+            Assertions.assertTrue(isUUID(chave.valor))
         }
     }
 
@@ -131,7 +159,7 @@ class ChavePixRegisterTest(
             .newBuilder()
             .setChave("")
             .setTipoChave(TipoChave.PHONE)
-            .setTipoConta(TipoConta.CONTA_CORRENTE)
+            .setTipoConta(TipoConta.CACC)
             .setIdCliente("c56dfef4-7901-44fb-84e2-a2cefb157890")
             .build()
 
@@ -140,6 +168,7 @@ class ChavePixRegisterTest(
         }
 
         with(exception){
+            Assertions.assertEquals(exception.status.code, Status.INVALID_ARGUMENT.code)
             Assertions.assertEquals(exception.status.description, "chave deve ser informada")
             Assertions.assertTrue(repository.findAll().isEmpty())
         }
@@ -150,7 +179,7 @@ class ChavePixRegisterTest(
             .newBuilder()
             .setChave("")
             .setTipoChave(TipoChave.EMAIL)
-            .setTipoConta(TipoConta.CONTA_CORRENTE)
+            .setTipoConta(TipoConta.CACC)
             .setIdCliente("c56dfef4-7901-44fb-84e2-a2cefb157890")
             .build()
 
@@ -159,6 +188,7 @@ class ChavePixRegisterTest(
         }
 
         with(exception){
+            Assertions.assertEquals(exception.status.code, Status.INVALID_ARGUMENT.code)
             Assertions.assertEquals(exception.status.description, "chave deve ser informada")
             Assertions.assertTrue(repository.findAll().isEmpty())
         }
@@ -170,7 +200,7 @@ class ChavePixRegisterTest(
             .newBuilder()
             .setChave("1234")
             .setTipoChave(TipoChave.CPF)
-            .setTipoConta(TipoConta.CONTA_CORRENTE)
+            .setTipoConta(TipoConta.CACC)
             .setIdCliente("c56dfef4-7901-44fb-84e2-a2cefb157890")
             .build()
 
@@ -179,6 +209,7 @@ class ChavePixRegisterTest(
         }
 
         with(exception){
+            Assertions.assertEquals(exception.status.code, Status.INVALID_ARGUMENT.code)
             Assertions.assertEquals(exception.status.description, "chave cpf formato invalido\n" +
                     "formato esperado 12345678901")
             Assertions.assertTrue(repository.findAll().isEmpty())
@@ -191,7 +222,7 @@ class ChavePixRegisterTest(
             .newBuilder()
             .setChave("1234")
             .setTipoChave(TipoChave.EMAIL)
-            .setTipoConta(TipoConta.CONTA_CORRENTE)
+            .setTipoConta(TipoConta.CACC)
             .setIdCliente("c56dfef4-7901-44fb-84e2-a2cefb157890")
             .build()
 
@@ -200,6 +231,7 @@ class ChavePixRegisterTest(
         }
 
         with(exception){
+            Assertions.assertEquals(exception.status.code, Status.INVALID_ARGUMENT.code)
             Assertions.assertEquals(exception.status.description, "chave email formato invalido\n" +
                     "formato esperado teste@teste.com")
             Assertions.assertTrue(repository.findAll().isEmpty())
@@ -212,7 +244,7 @@ class ChavePixRegisterTest(
             .newBuilder()
             .setChave("1234")
             .setTipoChave(TipoChave.PHONE)
-            .setTipoConta(TipoConta.CONTA_CORRENTE)
+            .setTipoConta(TipoConta.CACC)
             .setIdCliente("c56dfef4-7901-44fb-84e2-a2cefb157890")
             .build()
 
@@ -221,6 +253,7 @@ class ChavePixRegisterTest(
         }
 
         with(exception){
+            Assertions.assertEquals(exception.status.code, Status.INVALID_ARGUMENT.code)
             Assertions.assertEquals(exception.status.description, "chave telefone formato invalido\n" +
                     "formato esperado +5585988714077")
             Assertions.assertTrue(repository.findAll().isEmpty())
@@ -229,12 +262,12 @@ class ChavePixRegisterTest(
 
     @Test
     fun `retornar already exists em caso de chave repedita`() {
-        repository.save(ChavePix("c56dfef4-7901-44fb-84e2-a2cefb157890", TipoChave.CPF, "12345678901", TipoConta.CONTA_CORRENTE))
+        repository.save(ChavePix("c56dfef4-7901-44fb-84e2-a2cefb157890", TipoChave.CPF, "12345678901", TipoConta.CACC))
         val request = RegistrarChavePixGrpcRequest
             .newBuilder()
             .setChave("12345678901")
             .setTipoChave(TipoChave.CPF)
-            .setTipoConta(TipoConta.CONTA_CORRENTE)
+            .setTipoConta(TipoConta.CACC)
             .setIdCliente("c56dfef4-7901-44fb-84e2-a2cefb157890")
             .build()
 
@@ -243,6 +276,7 @@ class ChavePixRegisterTest(
         }
 
         with(exception){
+            Assertions.assertEquals(exception.status.code, Status.ALREADY_EXISTS.code)
             Assertions.assertEquals(exception.status.description, "chave ja existe")
         }
     }
@@ -250,6 +284,11 @@ class ChavePixRegisterTest(
     @MockBean(BCBClient::class)
     fun BCBClientMock(): BCBClient {
         return Mockito.mock(BCBClient::class.java)
+    }
+
+    @MockBean(ItauERPClient::class)
+    fun ItauERPClientMock(): ItauERPClient {
+        return Mockito.mock(ItauERPClient::class.java)
     }
 
     fun isUUID(string: String?): Boolean {

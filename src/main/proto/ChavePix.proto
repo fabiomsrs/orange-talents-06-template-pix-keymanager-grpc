@@ -6,10 +6,15 @@ option java_outer_classname = "ChavePix";
 
 package br.com.zup.edu;
 
+import "google/protobuf/timestamp.proto";
+
 service ChavePixService {
   rpc registrarChavePix (RegistrarChavePixGrpcRequest) returns (RegistrarChavePixGrpcResponse) {}
   rpc removerChavePix (RemoverChavePixGrpcRequest) returns (RemoverChavePixGrpcResponse) {}
+  rpc consultarChavePixKeyManager(ConsultarChavePixKeyManagerRequest) returns (ConsultarChavePixResponse){}
+  rpc consultarChavePixMicrosservicos(ConsultarChavePixMicrosservicosRequest) returns(ConsultarChavePixResponse){}
 }
+
 enum TipoChave {
   CPF = 0;
   PHONE = 1;
@@ -17,8 +22,8 @@ enum TipoChave {
   RANDOM= 3;
 }
 enum TipoConta {
-  CONTA_CORRENTE = 0;
-  POUPANCA = 1;
+  CACC = 0;
+  SVGS = 1;
 }
 
 message RegistrarChavePixGrpcRequest {
@@ -39,4 +44,31 @@ message RemoverChavePixGrpcRequest {
 
 message RemoverChavePixGrpcResponse {
   string idChavePix = 1;
+}
+
+message ConsultarChavePixKeyManagerRequest {
+  string idCliente = 1;
+  string idChavePix = 2;
+}
+
+message ConsultarChavePixResponse {
+  optional string idCliente = 1;
+  optional string idChavePix = 2;
+  TipoChave tipoChave = 3;
+  string chave = 4;
+  string nome = 5;
+  string cpf = 6;
+  Conta conta = 7;
+  google.protobuf.Timestamp criadoEm = 8;
+}
+
+message Conta{
+  string instituicao = 1;
+  string agencia = 2;
+  string numero = 3;
+  TipoConta tipoConta = 4;
+}
+
+message ConsultarChavePixMicrosservicosRequest {
+  string chave = 1;
 }

@@ -31,7 +31,7 @@ internal class ChavePixRemoverTest(
 
     @BeforeEach
     fun setUp() {
-        chavePix = repository.save(ChavePix("c56dfef4-7901-44fb-84e2-a2cefb157890", TipoChave.CPF, "12345678901", TipoConta.CONTA_CORRENTE))
+        chavePix = repository.save(ChavePix("c56dfef4-7901-44fb-84e2-a2cefb157890", TipoChave.CPF, "12345678901", TipoConta.CACC))
     }
 
     @AfterEach

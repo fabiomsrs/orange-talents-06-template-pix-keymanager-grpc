@@ -1,6 +1,7 @@
 package br.com.zup.edu.shared
 
 import br.com.zup.edu.shared.request.BCBPixDeleteRequest
+import br.com.zup.edu.shared.response.BCBPixConsultaResponse
 import br.com.zup.edu.shared.response.BCBPixResponse
 import io.micronaut.http.HttpResponse
 import io.micronaut.http.MediaType
@@ -18,4 +19,8 @@ interface BCBClient {
     @Produces(MediaType.APPLICATION_XML)
     @Consumes(MediaType.APPLICATION_XML)
     fun deletarChavePix(key: String, @Body bcbPixRequest: BCBPixDeleteRequest): HttpResponse<Any>
+
+    @Get("/pix/keys/{key}")
+    @Produces(MediaType.APPLICATION_XML)
+    fun consultarChavePix(@PathVariable key: String): HttpResponse<BCBPixConsultaResponse>
 }
