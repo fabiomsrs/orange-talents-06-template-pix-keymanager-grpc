@@ -6,4 +6,5 @@ import io.micronaut.data.jpa.repository.JpaRepository
 @Repository
 interface ChavePixRepository: JpaRepository<ChavePix, Long> {
     fun findByValor(chave: String?): List<ChavePix>
+    fun findByIdClient(idClient: String?): List<ChavePix>
 }

@@ -13,6 +13,7 @@ service ChavePixService {
   rpc removerChavePix (RemoverChavePixGrpcRequest) returns (RemoverChavePixGrpcResponse) {}
   rpc consultarChavePixKeyManager(ConsultarChavePixKeyManagerRequest) returns (ConsultarChavePixResponse){}
   rpc consultarChavePixMicrosservicos(ConsultarChavePixMicrosservicosRequest) returns(ConsultarChavePixResponse){}
+  rpc listarChavePix(ListarChavePixRequest) returns(ListarChavePixResponse){}
 }
 
 enum TipoChave {
@@ -71,4 +72,20 @@ message Conta{
 
 message ConsultarChavePixMicrosservicosRequest {
   string chave = 1;
+}
+
+message ListarChavePixRequest {
+  string clientId = 1;
+}
+
+message ListarChavePixResponse {
+  message Chave {
+    optional string idCliente = 1;
+    optional string idChavePix = 2;
+    TipoChave tipoChave = 3;
+    string chave = 4;
+    TipoConta tipoConta = 5;
+    google.protobuf.Timestamp criadoEm = 8;
+  }
+  repeated Chave chaves = 1;
 }

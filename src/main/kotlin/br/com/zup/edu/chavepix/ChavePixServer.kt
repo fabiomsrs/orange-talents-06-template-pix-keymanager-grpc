@@ -3,10 +3,7 @@ package br.com.zup.edu.chavepix
 import br.com.zup.edu.*
 import br.com.zup.edu.shared.*
 import br.com.zup.edu.shared.request.BCBPixDeleteRequest
-import br.com.zup.edu.validator.ChavePixConsultaMicrosservicoValidator
-import br.com.zup.edu.validator.ChavePixConsultaKeyManagerValidator
-import br.com.zup.edu.validator.ChavePixRegisterValidator
-import br.com.zup.edu.validator.ChavePixRemoverValidator
+import br.com.zup.edu.validator.*
 import com.google.protobuf.Timestamp
 import io.grpc.Status
 import io.grpc.stub.StreamObserver
@@ -190,6 +187,36 @@ class ChavePixServer(@Inject val chavePixRepository: ChavePixRepository,
             }
         }
         return
+    }
+
+    override fun listarChavePix(
+        request: ListarChavePixRequest?,
+        responseObserver: StreamObserver<ListarChavePixResponse>?
+    ) {
+        if(ChavePixListarValidator(request, responseObserver).validate()){
+            val chaves = chavePixRepository.findByIdClient(request!!.clientId).map {
+                ListarChavePixResponse.Chave
+                    .newBuilder()
+                    .setIdCliente(it.idClient)
+                    .setIdChavePix(it.id.toString())
+                    .setChave(it.valor)
+                    .setTipoChave(it.tipoChave)
+                    .setTipoConta(it.tipoConta)
+                    .setCriadoEm(Timestamp
+                        .newBuilder()
+                        .setSeconds(it.createdAt.toEpochSecond(ZoneOffset.UTC))
+                        .setNanos(it.createdAt.nano)
+                        .build()
+                    )
+                    .build()
+            }
+            responseObserver!!.onNext(ListarChavePixResponse
+                .newBuilder()
+                .addAllChaves(chaves)
+                .build()
+            )
+            responseObserver!!.onCompleted()
+        }
     }
 
 }
