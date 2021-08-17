@@ -3,6 +3,7 @@ package br.com.zup.edu.chavepix
 import br.com.zup.edu.*
 import br.com.zup.edu.shared.*
 import br.com.zup.edu.shared.request.BCBPixDeleteRequest
+import br.com.zup.edu.shared.utils.converterParaTipoContaItau
 import br.com.zup.edu.validator.*
 import com.google.protobuf.Timestamp
 import io.grpc.Status
@@ -24,7 +25,7 @@ class ChavePixServer(@Inject val chavePixRepository: ChavePixRepository,
     ) {
 
         try{
-            itauERPClient.consultarContaCliente(request!!.idCliente, request!!.tipoConta.name).let { response ->
+            itauERPClient.consultarContaCliente(request!!.idCliente, request!!.tipoConta.converterParaTipoContaItau()).let { response ->
                 if(ChavePixRegisterValidator(request, responseObserver, chavePixRepository)
                     .validate() && response.status.code==200){
                     val body = response.body()

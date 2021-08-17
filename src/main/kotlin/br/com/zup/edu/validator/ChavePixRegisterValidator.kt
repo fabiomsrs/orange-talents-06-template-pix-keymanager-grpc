@@ -52,7 +52,7 @@ class ChavePixRegisterValidator(
                     .asRuntimeException())
                 return false
             }
-            !request.chave.matches("^[A-Za-z0-9+_.-]+@(.+)\\\$".toRegex()) && request.tipoChave == TipoChave.EMAIL -> {
+            !request.chave.matches("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\$".toRegex()) && request.tipoChave == TipoChave.EMAIL -> {
                 responseObserver?.onError(
                     Status.INVALID_ARGUMENT
                     .withDescription("chave email formato invalido")
