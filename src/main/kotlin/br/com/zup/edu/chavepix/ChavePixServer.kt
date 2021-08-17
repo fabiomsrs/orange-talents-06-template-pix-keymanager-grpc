@@ -50,11 +50,11 @@ class ChavePixServer(@Inject val chavePixRepository: ChavePixRepository,
                         )
                         responseObserver!!.onCompleted()
                     }
-                    return
+                }else{
+                    responseObserver?.onError(Status.NOT_FOUND
+                        .withDescription("cliente id incorreto ou não informado")
+                        .asRuntimeException())
                 }
-                responseObserver?.onError(Status.NOT_FOUND
-                    .withDescription("cliente id incorreto ou não informado")
-                    .asRuntimeException())
 
             }
         }catch (e: Exception){

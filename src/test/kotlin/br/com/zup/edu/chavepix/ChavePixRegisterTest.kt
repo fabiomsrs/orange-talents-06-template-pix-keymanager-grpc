@@ -6,6 +6,7 @@ import br.com.zup.edu.TipoChave
 import br.com.zup.edu.TipoConta
 import br.com.zup.edu.shared.*
 import br.com.zup.edu.shared.response.BCBPixResponse
+import br.com.zup.edu.shared.utils.converterParaTipoContaItau
 import io.grpc.ManagedChannel
 import io.grpc.Status
 import io.grpc.StatusRuntimeException
@@ -50,14 +51,14 @@ class ChavePixRegisterTest(
             BankOwnerDto("NATURAL_PERSON", "steve jobs", "12345678901")
         )
         val bcbResponse = BCBPixResponse(bcbRequest.keyType, bcbRequest.key, bcbRequest.bankAccount, bcbRequest.owner)
-        val itauResponse = ClienteContaItauResponse(TipoConta.CACC.name,
+        val itauResponse = ClienteContaItauResponse(TipoConta.CACC.converterParaTipoContaItau(),
             InstituicaoDto("itau","60701190"),
             "0001",
             "123456",
             TitularDto("1", "steve jobs","12345678901")
         )
 
-        `when`(itauERPClient.consultarContaCliente("c56dfef4-7901-44fb-84e2-a2cefb157890",TipoConta.CACC.name)).thenReturn(
+        `when`(itauERPClient.consultarContaCliente("c56dfef4-7901-44fb-84e2-a2cefb157890",TipoConta.CACC.converterParaTipoContaItau())).thenReturn(
             HttpResponse.ok(itauResponse))
         `when`(bcbClient.gerarChavePix(bcbRequest)).thenReturn(HttpResponse.created(bcbResponse))
 
@@ -126,14 +127,14 @@ class ChavePixRegisterTest(
             BankOwnerDto("NATURAL_PERSON", "steve jobs", "12345678901")
         )
         val bcbResponse = BCBPixResponse(bcbRequest.keyType, UUID.randomUUID().toString(), bcbRequest.bankAccount, bcbRequest.owner)
-        val itauResponse = ClienteContaItauResponse(TipoConta.CACC.name,
+        val itauResponse = ClienteContaItauResponse(TipoConta.CACC.converterParaTipoContaItau(),
             InstituicaoDto("itau","60701190"),
             "0001",
             "123456",
             TitularDto("1", "steve jobs","12345678901")
         )
 
-        `when`(itauERPClient.consultarContaCliente("c56dfef4-7901-44fb-84e2-a2cefb157890",TipoConta.CACC.name)).thenReturn(
+        `when`(itauERPClient.consultarContaCliente("c56dfef4-7901-44fb-84e2-a2cefb157890",TipoConta.CACC.converterParaTipoContaItau())).thenReturn(
             HttpResponse.ok(itauResponse))
         `when`(bcbClient.gerarChavePix(bcbRequest)).thenReturn(HttpResponse.created(bcbResponse))
 
